@@ -13,3 +13,6 @@ dockerImg=catthehacker/ubuntu:runner-20.04
 
 #act -v --privileged --platform ${github_runner}=${dockerImg}
 act workflow_dispatch -W ./.github/workflows/build_Lede_R4S.yml -v -P ${github_runner}=${dockerImg}
+
+#本地项目挂载进去编译
+#act workflow_dispatch -W ./.github/workflows/build_Lede_R4S.yml -v -P ${github_runner}=${dockerImg} -b -C

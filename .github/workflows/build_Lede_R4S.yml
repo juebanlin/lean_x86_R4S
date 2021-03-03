@@ -40,36 +40,39 @@ jobs:
       matrix:
         target: [Lede_nanopi_r4s]
     steps:
-    - name: 准备结束
+      - name: 环境初始化
+        run: |
+          echo "当前时间$(date),当前用户:$(whoami),$USER:$GROUPS,当前目录:$(pwd),target:${{matrix.target}}"
+          if  [[ ! ` sudo grep  -a CST-8  /etc/localtime ` ]];  then
+               echo "修改时区为:$TZ"
+               sudo rm  -rf  /etc/localtime
+               sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
+               echo "修正后当前时间$(date)"
+          fi
+          sudo chmod 777 $GITHUB_ENV
+          source "${GITHUB_WORKSPACE}/build/${{matrix.target}}/settings.ini"
+          if [ "x${ACT}" != "xtrue" ]; then
+                ACT='false'
+          fi
+          echo "ACT=${ACT}"
+          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          #让后面的步骤可以用到这些变量
+          echo "ACT=${ACT}" >> $GITHUB_ENV
+          echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
+          echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
+          echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
+          echo "DIY_P1_SH=${DIY_P1_SH}" >> $GITHUB_ENV
+          echo "DIY_P2_SH=${DIY_P2_SH}" >> $GITHUB_ENV
+          echo "SSH_ACTIONS=${SSH_ACTIONS}" >> $GITHUB_ENV
+          echo "UPLOAD_BIN_DIR=${UPLOAD_BIN_DIR}" >> $GITHUB_ENV
+          echo "UPLOAD_CONFIG=${UPLOAD_CONFIG}" >> $GITHUB_ENV
+          echo "UPLOAD_FIRMWARE=${UPLOAD_FIRMWARE}" >> $GITHUB_ENV
+          echo "UPLOAD_COWTRANSFER=${UPLOAD_COWTRANSFER}" >> $GITHUB_ENV
+          echo "UPLOAD_RELEASE=${UPLOAD_RELEASE}" >> $GITHUB_ENV
+    - name: 检出构建仓库
       uses: actions/checkout@v2
-    
-    - name: 检测脚本设置
-      run: |
-        echo "当前时间$(date),当前用户:$(whoami),$USER:$GROUPS,当前目录:$(pwd),target:${{matrix.target}}"
-        if  [[ ! ` sudo grep  -a CST-8  /etc/localtime ` ]];  then
-             echo "修改时区为:$TZ"
-             sudo rm  -rf  /etc/localtime
-             sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
-             echo "修正后当前时间$(date)"
-        fi
-        sudo chmod 777 $GITHUB_ENV
-        source "${GITHUB_WORKSPACE}/build/${{matrix.target}}/settings.ini"
-        if [ "x${ACT}" == "x" ]; then
-              ACT='false'
-        fi
-        echo "ACT=${ACT}"
-        echo "ACT=${ACT}" >> $GITHUB_ENV
-        echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
-        echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
-        echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
-        echo "DIY_P1_SH=${DIY_P1_SH}" >> $GITHUB_ENV
-        echo "DIY_P2_SH=${DIY_P2_SH}" >> $GITHUB_ENV
-        echo "SSH_ACTIONS=${SSH_ACTIONS}" >> $GITHUB_ENV
-        echo "UPLOAD_BIN_DIR=${UPLOAD_BIN_DIR}" >> $GITHUB_ENV
-        echo "UPLOAD_CONFIG=${UPLOAD_CONFIG}" >> $GITHUB_ENV
-        echo "UPLOAD_FIRMWARE=${UPLOAD_FIRMWARE}" >> $GITHUB_ENV
-        echo "UPLOAD_COWTRANSFER=${UPLOAD_COWTRANSFER}" >> $GITHUB_ENV
-        echo "UPLOAD_RELEASE=${UPLOAD_RELEASE}" >> $GITHUB_ENV
+      if:  env.ACT == 'false'
+
     - name: 开始安装编译所需系统
       env:
         DEBIAN_FRONTEND: noninteractive
