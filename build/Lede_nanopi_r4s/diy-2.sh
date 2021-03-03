@@ -38,4 +38,11 @@ sed -i 's@.*CYXluq4wUazHjmCDBCqXF*@#&@g' package/lean/default-settings/files/zzz
 #sed -i 's/"管理权"/"改密码"/g' feeds/luci/modules/luci-base/po/zh-cn/base.po
 #sed -i 's/"带宽监控"/"监视"/g' feeds/luci/applications/luci-app-nlbwmon/po/zh-cn/nlbwmon.po
 
+
+pushd feeds/luci/applications
+rm -rf luci-app-smartdns
+git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
+popd
+
+./scripts/feeds install luci -a
 echo "########DIY2.sh END######"
