@@ -54,8 +54,6 @@ jobs:
         fi
         sudo chmod 777 $GITHUB_ENV
         source "${GITHUB_WORKSPACE}/build/${{matrix.target}}/settings.ini"
-        echo "ACT:${ACT}----${{env.ACT}}"
-        echo "ACT=${ACT}" >> $GITHUB_ENV
         echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
         echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
@@ -120,7 +118,7 @@ jobs:
         
     - name: SSH远程连接
       uses: 281677160/debugger-action@master
-      if: ${{ env.ACT }} == 'true' && env.SSH_ACTIONS == 'true'
+      if: env.ACT == 'true' && env.SSH_ACTIONS == 'true'
 
     - name: 下载软件包
       id: package
