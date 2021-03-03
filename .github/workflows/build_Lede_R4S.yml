@@ -8,15 +8,15 @@
 name: 编译R4S-lede固件V2
 on:
   workflow_dispatch:
-    inputs:
-      ssh:
-        description: 'SSH远程'
-        required: false
-        default: false
-      release:
-        description: '发布固件'
-        required: false
-        default: false
+#    inputs:
+#      ssh:
+#        description: 'SSH远程'
+#        required: false
+#        default: false
+#      release:
+#        description: '发布固件'
+#        required: false
+#        default: false
 
 # 定时任务，在每天的18点对应北京时间凌晨2点执行任务
   schedule:
@@ -25,7 +25,6 @@ on:
 env: 
   #REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
   TZ: Asia/Shanghai
-  GITHUB_RELEASE: https://github.com/juebanlin/r4s/releases
   UPLOAD_WETRANSFER: true
   UPLOAD_COWTRANSFER: true
   UPLOAD_RELEASE: true
@@ -58,7 +57,6 @@ jobs:
         echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
         echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
-        echo "WXFB_MESSAGE=${WXFB_MESSAGE}" >> $GITHUB_ENV
         echo "DIY_P1_SH=${DIY_P1_SH}" >> $GITHUB_ENV
         echo "DIY_P2_SH=${DIY_P2_SH}" >> $GITHUB_ENV
         echo "SSH_ACTIONS=${SSH_ACTIONS}" >> $GITHUB_ENV
@@ -118,23 +116,13 @@ jobs:
         fi
         [ -e $GITHUB_WORKSPACE/build/${{matrix.target}}/$CONFIG_FILE ]
         mv $GITHUB_WORKSPACE/build/${{matrix.target}}/$CONFIG_FILE .config
-        if [ $REPO_URL == "https://github.com/coolsnowwolf/lede" ]; then
-         echo "NAME2=Lede-" >> $GITHUB_ENV
-         echo "ZUOZHE=lean" >> $GITHUB_ENV
-        elif [ $REPO_URL == "https://github.com/Lienol/openwrt" ]; then
-         echo "NAME2=Lienol-" >> $GITHUB_ENV
-         echo "ZUOZHE=lienol" >> $GITHUB_ENV
-        elif [ $REPO_URL == "https://github.com/project-openwrt/openwrt" ]; then
-         echo "NAME2=Project-" >> $GITHUB_ENV
-         echo "ZUOZHE=CTCGFW" >> $GITHUB_ENV
-        fi
         rm -rf {LICENSE,README,README.md}
         rm -rf ./*/{LICENSE,README,README.md}
         rm -rf ./*/*/{LICENSE,README,README.md}
         
     - name: SSH远程连接（若打开了此功能,在此转圈2分钟还展开不了,请看《SSH连接教程》）
       uses: 281677160/debugger-action@master
-      if: ${{ !env.ACT }} && (env.SSH_ACTIONS == 'true' || ${{ github.event.inputs.ssh }}  == 'true')
+      if: ${{ !env.ACT }} && (env.SSH_ACTIONS == 'true')
       env:
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -162,6 +150,7 @@ jobs:
         echo "date2=$(date "+%Y%m%d%H%M%S")" >> $GITHUB_ENV
         DEVICE=$(awk -F '[="]+' '/TARGET_BOARD/{print $2}' .config)
         SUBTARGET="$(awk -F '[="]+' '/TARGET_SUBTARGET/{print $2}' .config)"
+        echo "NAME2=${{matrix.target}}" >> $GITHUB_ENV
         if [ $DEVICE == "x86" ]; then
          echo "NAME1=x86-${SUBTARGET}" >> $GITHUB_ENV
         elif [ $DEVICE != "x86" ]; then
@@ -222,7 +211,7 @@ jobs:
         echo "::warning file=WeTransfer（${{matrix.target}}）::$(cat wetransfer.log | grep https)"
     
     - name: 提取发布用的「奶牛快传」跟「WeTransfer」的链接
-      if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true' || github.event.inputs.release  == 'true')
+      if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
       run: |
         echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
         curl -fsSL git.io/file-transfer | sh
@@ -234,19 +223,15 @@ jobs:
     
     - name: 自动发布固件
       uses: softprops/action-gh-release@v1
-      if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true' || github.event.inputs.release  == 'true')
+      if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
       env:
         GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
       with:
-        name: ${{ env.date1 }} 「 ${{ env.WXFB_MESSAGE }} 」固件
+        name: ${{ env.date1 }} 「 ${{matrix.target}} 」固件
         tag_name: ${{ env.date2 }}
-        body: |            
-            ☆  源码 : ${{ env.REPO_URL }}
-            ☆  分支 : ${{ env.REPO_BRANCH }}
-            ☆  感谢源码作者[ ${{ env.ZUOZHE }}大神 ]无私分享！
-            
-            🎉 [ ${{ env.NAME2 }}${{ env.NAME1 }} ]固件下载 ✨
-            -
+        body: |
+            OpenWrt-${{ env.NAME2 }}${{ env.NAME1 }}-firmware-${{ env.date }}
+
             💐 奶牛快传(国内高速🚀下载)： ${{ env.COWTRANSFER_URL }}
             
             ⛄ WeTransfer(国外高速🚀下载)： ${{ env.WETRANSFER_URL }}
