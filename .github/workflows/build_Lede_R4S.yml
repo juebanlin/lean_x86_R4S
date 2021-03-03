@@ -57,8 +57,8 @@ jobs:
         if [ "x${ACT}" == "x" ]; then
               ACT='false'
         fi
+        echo "ACT=${ACT}"
         echo "ACT=${ACT}" >> $GITHUB_ENV
-        echo "ACT:${ACT}---${{env.ACT}}"
         echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
         echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
