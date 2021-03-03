@@ -54,6 +54,7 @@ jobs:
         fi
         sudo chmod 777 $GITHUB_ENV
         source "${GITHUB_WORKSPACE}/build/${{matrix.target}}/settings.ini"
+        echo "ACT=${ACT}" >> $GITHUB_ENV
         echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
         echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
@@ -77,7 +78,7 @@ jobs:
         sudo -E apt-get -qq autoremove -y --purge
         sudo -E apt-get -qq clean -y
 
-    - name: 下载${{matrix.target}}源码
+    - name: 下载lean源码
       run: |
         echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
         df -hT $PWD
@@ -120,7 +121,7 @@ jobs:
         rm -rf ./*/{LICENSE,README,README.md}
         rm -rf ./*/*/{LICENSE,README,README.md}
         
-    - name: SSH远程连接（若打开了此功能,在此转圈2分钟还展开不了,请看《SSH连接教程》）
+    - name: SSH远程连接,actEnv:${{ env.ACT }}
       uses: 281677160/debugger-action@master
       if: ${{ env.ACT }} == 'true' && env.SSH_ACTIONS == 'true'
 
