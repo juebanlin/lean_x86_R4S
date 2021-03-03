@@ -54,6 +54,7 @@ jobs:
         fi
         sudo chmod 777 $GITHUB_ENV
         source "${GITHUB_WORKSPACE}/build/${{matrix.target}}/settings.ini"
+        echo "ACT:${ACT}----${{ACT}}---${{env.ACT}}"
         echo "ACT=${ACT}" >> $GITHUB_ENV
         echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
         echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
@@ -90,11 +91,9 @@ jobs:
     - name: 加载源,patch补丁和自定义设置
       run: |
         echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        #cp -Rf `find ./ -maxdepth 1 -type d ! -path './openwrt' ! -path './'` openwrt
         cd openwrt
         sudo chmod 777 -R $GITHUB_WORKSPACE/build
         if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH" ]; then
-          #chmod +x $GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH
           /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH"
         fi
         if [ -n "$(ls -A "$GITHUB_WORKSPACE/patches" 2>/dev/null)" ]; then
@@ -102,7 +101,6 @@ jobs:
         fi
         ./scripts/feeds clean && ./scripts/feeds update -a && ./scripts/feeds install -a && ./scripts/feeds install -a
         if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH" ]; then
-          #chmod 777 $GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH
           /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH"
         fi
         if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/patches" 2>/dev/null)" ]; then
@@ -110,7 +108,6 @@ jobs:
         fi
         if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/files" 2>/dev/null)" ]; then
          cp -rf $GITHUB_WORKSPACE/build/${{matrix.target}}/files files
-         #chmod -R 777 $GITHUB_WORKSPACE/build/${{matrix.target}}/files/* ./
         fi
         if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/diy" 2>/dev/null)" ]; then
          cp -Rf $GITHUB_WORKSPACE/build/${{matrix.target}}/diy/* ./
@@ -121,7 +118,7 @@ jobs:
         rm -rf ./*/{LICENSE,README,README.md}
         rm -rf ./*/*/{LICENSE,README,README.md}
         
-    - name: SSH远程连接,actEnv:${{ env.ACT }}
+    - name: SSH远程连接
       uses: 281677160/debugger-action@master
       if: ${{ env.ACT }} == 'true' && env.SSH_ACTIONS == 'true'
 
