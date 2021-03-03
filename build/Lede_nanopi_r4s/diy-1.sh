@@ -66,7 +66,7 @@ git clone --depth=1 https://github.com/tindy2013/openwrt-subconverter
 rm -rf smartdns
 rm -rf luci-app-smartdns
 git clone --depth=1 https://github.com/pymumu/smartdns
-git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
+#git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
 rm -rf ../lean/smartdns
 rm -rf ../lean/luci-app-smartdns
 
