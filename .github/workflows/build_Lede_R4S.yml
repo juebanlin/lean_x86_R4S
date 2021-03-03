@@ -122,10 +122,7 @@ jobs:
         
     - name: SSH远程连接（若打开了此功能,在此转圈2分钟还展开不了,请看《SSH连接教程》）
       uses: 281677160/debugger-action@master
-      if: ${{ !env.ACT }} && (env.SSH_ACTIONS == 'true')
-      env:
-        TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      if: ${{ env.ACT }} == 'true' && env.SSH_ACTIONS == 'true'
 
     - name: 下载软件包
       id: package
