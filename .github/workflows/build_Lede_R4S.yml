@@ -8,21 +8,21 @@
 name: 编译R4S-lede固件
 on:
   workflow_dispatch:
-#    inputs:
-#      ssh:
-#        description: 'SSH远程'
-#        required: false
-#        default: false
-#      release:
-#        description: '发布固件'
-#        required: false
-#        default: false
+  #    inputs:
+  #      ssh:
+  #        description: 'SSH远程'
+  #        required: false
+  #        default: false
+  #      release:
+  #        description: '发布固件'
+  #        required: false
+  #        default: false
 
-# 定时任务，在每天的18点对应北京时间凌晨2点执行任务
+  # 定时任务，在每天的18点对应北京时间凌晨2点执行任务
   schedule:
     - cron: 0 18 * * *
 
-env: 
+env:
   #REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
   TZ: Asia/Shanghai
   UPLOAD_WETRANSFER: true
@@ -38,7 +38,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        target: [Lede_nanopi_r4s]
+        target: [ Lede_nanopi_r4s ]
     steps:
       - name: 环境初始化
         run: |
@@ -69,190 +69,190 @@ jobs:
           echo "UPLOAD_FIRMWARE=${UPLOAD_FIRMWARE}" >> $GITHUB_ENV
           echo "UPLOAD_COWTRANSFER=${UPLOAD_COWTRANSFER}" >> $GITHUB_ENV
           echo "UPLOAD_RELEASE=${UPLOAD_RELEASE}" >> $GITHUB_ENV
-    - name: 检出构建仓库
-      uses: actions/checkout@v2
-      if:  env.ACT == 'false'
+      - name: 检出构建仓库
+        uses: actions/checkout@v2
+        if: env.ACT == 'false'
 
-    - name: 开始安装编译所需系统
-      env:
-        DEBIAN_FRONTEND: noninteractive
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
-        sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
-        sudo -E apt-get -qq update -y
-        sudo -E apt-get -qq install -y build-essential asciidoc binutils bzip2 gawk gettext git libc6-dev libncurses5 libtinfo-dev libtinfo5 ncurses-doc libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc1 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf wget curl swig rsync
-        sudo -E apt-get -qq autoremove -y --purge
-        sudo -E apt-get -qq clean -y
+      - name: 开始安装编译所需系统
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo -E apt-get -qq update -y
+          sudo -E apt-get -qq install -y build-essential asciidoc binutils bzip2 gawk gettext git libc6-dev libncurses5 libtinfo-dev libtinfo5 ncurses-doc libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc1 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf wget curl swig rsync
+          sudo -E apt-get -qq autoremove -y --purge
+          sudo -E apt-get -qq clean -y
 
-    - name: 下载lean源码
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
-        df -hT $PWD
-        sudo git config --global user.email "git@github.com"
-        sudo git config --global user.name "GitHub"
-        sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL openwrt
-        sudo chown -R $(whoami) openwrt
+      - name: 下载lean源码
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          df -hT $PWD
+          sudo git config --global user.email "git@github.com"
+          sudo git config --global user.name "GitHub"
+          sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL openwrt
+          sudo chown -R $(whoami) openwrt
 
-    - name: 加载源,patch补丁和自定义设置
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        cd openwrt
-        sudo chmod 777 -R $GITHUB_WORKSPACE/build
-        if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH" ]; then
-          /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH"
-        fi
-        if [ -n "$(ls -A "$GITHUB_WORKSPACE/patches" 2>/dev/null)" ]; then
-           sudo git am $GITHUB_WORKSPACE/patches/lean/*.patch
-        fi
-        ./scripts/feeds clean && ./scripts/feeds update -a && ./scripts/feeds install -a && ./scripts/feeds install -a
-        if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH" ]; then
-          /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH"
-        fi
-        if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/patches" 2>/dev/null)" ]; then
-          find "$GITHUB_WORKSPACE/build/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
-        fi
-        if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/files" 2>/dev/null)" ]; then
-         cp -rf $GITHUB_WORKSPACE/build/${{matrix.target}}/files files
-        fi
-        if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/diy" 2>/dev/null)" ]; then
-         cp -Rf $GITHUB_WORKSPACE/build/${{matrix.target}}/diy/* ./
-        fi
-        [ -e $GITHUB_WORKSPACE/build/${{matrix.target}}/$CONFIG_FILE ]
-        mv $GITHUB_WORKSPACE/build/${{matrix.target}}/$CONFIG_FILE .config
-        rm -rf {LICENSE,README,README.md}
-        rm -rf ./*/{LICENSE,README,README.md}
-        rm -rf ./*/*/{LICENSE,README,README.md}
-        
-    - name: SSH远程连接
-      uses: 281677160/debugger-action@master
-      if: env.ACT == 'true' && env.SSH_ACTIONS == 'true'
+      - name: 加载源,patch补丁和自定义设置
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          cd openwrt
+          sudo chmod 777 -R $GITHUB_WORKSPACE/build
+          if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH" ]; then
+            /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P1_SH"
+          fi
+          if [ -n "$(ls -A "$GITHUB_WORKSPACE/patches" 2>/dev/null)" ]; then
+             sudo git am $GITHUB_WORKSPACE/patches/lean/*.patch
+          fi
+          ./scripts/feeds clean && ./scripts/feeds update -a && ./scripts/feeds install -a && ./scripts/feeds install -a
+          if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH" ]; then
+            /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_P2_SH"
+          fi
+          if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/patches" 2>/dev/null)" ]; then
+            find "$GITHUB_WORKSPACE/build/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
+          fi
+          if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/files" 2>/dev/null)" ]; then
+           cp -rf $GITHUB_WORKSPACE/build/${{matrix.target}}/files files
+          fi
+          if [ -n "$(ls -A "$GITHUB_WORKSPACE/build/${{matrix.target}}/diy" 2>/dev/null)" ]; then
+           cp -Rf $GITHUB_WORKSPACE/build/${{matrix.target}}/diy/* ./
+          fi
+          [ -e $GITHUB_WORKSPACE/build/${{matrix.target}}/$CONFIG_FILE ]
+          mv $GITHUB_WORKSPACE/build/${{matrix.target}}/$CONFIG_FILE .config
+          rm -rf {LICENSE,README,README.md}
+          rm -rf ./*/{LICENSE,README,README.md}
+          rm -rf ./*/*/{LICENSE,README,README.md}
 
-    - name: 下载软件包
-      id: package
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        cd openwrt
-        make defconfig
-        make download -j8 V=s
-        find dl -size -1024c -exec ls -l {} \;
-        find dl -size -1024c -exec rm -f {} \;
-    
-    - name: 开始编译固件
-      id: compile
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        cd openwrt
-        echo -e "$(($(nproc)+1)) thread compile"
-        make -j$(($(nproc)+1)) || make -j1 V=s
-        echo "::set-output name=status::success"
-        echo "build_date=$(date "+%y.%m.%d-%H%M")" >> $GITHUB_ENV
-        DEVICE=$(awk -F '[="]+' '/TARGET_BOARD/{print $2}' .config)
-        SUBTARGET="$(awk -F '[="]+' '/TARGET_SUBTARGET/{print $2}' .config)"
-        echo "#####DEVICE:${DEVICE},SUBTARGET:${SUBTARGET}"
-        echo "NAME2=${{matrix.target}}" >> $GITHUB_ENV
-        if [ $DEVICE == "x86" ]; then
-         echo "NAME1=x86-${SUBTARGET}" >> $GITHUB_ENV
-        elif [ $DEVICE != "x86" ]; then
-         grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > NAME1
-         [ -s NAME1 ] && echo "NAME1=$(cat NAME1)" >> $GITHUB_ENV
-        fi
+      - name: SSH远程连接
+        uses: 281677160/debugger-action@master
+        if: env.ACT == 'true' && env.SSH_ACTIONS == 'true'
 
-    - name: 上传bin文件夹(固件+ipk)在github空间
-      uses: actions/upload-artifact@v2
-      if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
-      with:
-        name: OpenWrt-bin-${{ env.NAME2 }}${{ env.NAME1 }}_${{ env.build_date }}
-        path: openwrt/bin
-    
-    - name: 整理固件文件夹
-      id: organizer
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        mkdir config
-        find openwrt/bin/targets/ -name "*config.buildinfo*" | xargs -i cp -f {} config
-        if [ -n "$(ls -A "openwrt/bin/targets/x86" 2>/dev/null)" ]; then
-         find openwrt/bin/targets/x86/* -name "*kernel*" | xargs -i mv -f {} openwrt/bin/targets
-        fi
-        cd openwrt/bin/targets/*/*
-        rm -rf packages && mkdir packages
-        find -name "*feeds.buildinfo*" | xargs -i mv -f {} packages
-        find -name "*version.buildinfo*" | xargs -i mv -f {} packages
-        find -name "*manifest*" | xargs -i mv -f {} packages
-        find -name "*vmlinuz*" | xargs -i mv -f {} packages
-        find -name "*Image*" | xargs -i mv -f {} packages
-        rm -rf packages
-        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
-        echo "::set-output name=status::success"
-    
-    - name: 上传.config配置文件在github空间
-      uses: actions/upload-artifact@v2
-      if: steps.organizer.outputs.status == 'success' && env.UPLOAD_CONFIG == 'true'
-      with:
-        name: .config-${{ env.NAME2 }}${{ env.NAME1 }}_${{ env.build_date }}
-        path: ./config
+      - name: 下载软件包
+        id: package
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          cd openwrt
+          make defconfig
+          make download -j8 V=s
+          find dl -size -1024c -exec ls -l {} \;
+          find dl -size -1024c -exec rm -f {} \;
 
-    - name: 上传固件在github空间
-      uses: actions/upload-artifact@v2
-      if: steps.organizer.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true'
-      with:
-        name: OpenWrt-${{ env.NAME2 }}${{ env.NAME1 }}-firmware-${{ env.build_date }}
-        path: ${{ env.FIRMWARE }}
+      - name: 开始编译固件
+        id: compile
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          cd openwrt
+          echo -e "$(($(nproc)+1)) thread compile"
+          make -j$(($(nproc)+1)) || make -j1 V=s
+          echo "::set-output name=status::success"
+          echo "build_date=$(date "+%y.%m.%d-%H%M")" >> $GITHUB_ENV
+          DEVICE=$(awk -F '[="]+' '/TARGET_BOARD/{print $2}' .config)
+          SUBTARGET="$(awk -F '[="]+' '/TARGET_SUBTARGET/{print $2}' .config)"
+          echo "#####DEVICE:${DEVICE},SUBTARGET:${SUBTARGET}"
+          echo "NAME2=${{matrix.target}}" >> $GITHUB_ENV
+          if [ $DEVICE == "x86" ]; then
+           echo "NAME1=x86-${SUBTARGET}" >> $GITHUB_ENV
+          elif [ $DEVICE != "x86" ]; then
+           grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > NAME1
+           [ -s NAME1 ] && echo "NAME1=$(cat NAME1)" >> $GITHUB_ENV
+          fi
 
-    - name: 上传固件到「奶牛快传」和「WeTransfer」
-      if: steps.organizer.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
-        echo "::warning file=奶牛快传（${{matrix.target}}）::$(cat cowtransfer.log | grep https)"
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
-        echo "::warning file=WeTransfer（${{matrix.target}}）::$(cat wetransfer.log | grep https)"
-    
-    - name: 提取发布用的「奶牛快传」跟「WeTransfer」的链接
-      if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
-      run: |
-        echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
-        echo "COWTRANSFER_URL=$(cat cowtransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
-        curl -fsSL git.io/file-transfer | sh
-        ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
-        echo "WETRANSFER_URL=$(cat wetransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
-    
-    - name: 自动发布固件
-      uses: softprops/action-gh-release@v1
-      if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
-      env:
-        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-      with:
-        name: $(date "+%Y年%m月%d号-%H点%M分") 「 ${{matrix.target}} 」固件
-        tag_name: $(date "+%Y%m%d%H%M%S")
-        body: |
+      - name: 上传bin文件夹(固件+ipk)在github空间
+        uses: actions/upload-artifact@v2
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
+        with:
+          name: OpenWrt-bin-${{ env.NAME2 }}${{ env.NAME1 }}_${{ env.build_date }}
+          path: openwrt/bin
+
+      - name: 整理固件文件夹
+        id: organizer
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          mkdir config
+          find openwrt/bin/targets/ -name "*config.buildinfo*" | xargs -i cp -f {} config
+          if [ -n "$(ls -A "openwrt/bin/targets/x86" 2>/dev/null)" ]; then
+           find openwrt/bin/targets/x86/* -name "*kernel*" | xargs -i mv -f {} openwrt/bin/targets
+          fi
+          cd openwrt/bin/targets/*/*
+          rm -rf packages && mkdir packages
+          find -name "*feeds.buildinfo*" | xargs -i mv -f {} packages
+          find -name "*version.buildinfo*" | xargs -i mv -f {} packages
+          find -name "*manifest*" | xargs -i mv -f {} packages
+          find -name "*vmlinuz*" | xargs -i mv -f {} packages
+          find -name "*Image*" | xargs -i mv -f {} packages
+          rm -rf packages
+          echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          echo "::set-output name=status::success"
+
+      - name: 上传.config配置文件在github空间
+        uses: actions/upload-artifact@v2
+        if: steps.organizer.outputs.status == 'success' && env.UPLOAD_CONFIG == 'true'
+        with:
+          name: .config-${{ env.NAME2 }}${{ env.NAME1 }}_${{ env.build_date }}
+          path: ./config
+
+      - name: 上传固件在github空间
+        uses: actions/upload-artifact@v2
+        if: steps.organizer.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true'
+        with:
+          name: OpenWrt-${{ env.NAME2 }}${{ env.NAME1 }}-firmware-${{ env.build_date }}
+          path: ${{ env.FIRMWARE }}
+
+      - name: 上传固件到「奶牛快传」和「WeTransfer」
+        if: steps.organizer.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          curl -fsSL git.io/file-transfer | sh
+          ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
+          echo "::warning file=奶牛快传（${{matrix.target}}）::$(cat cowtransfer.log | grep https)"
+          curl -fsSL git.io/file-transfer | sh
+          ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
+          echo "::warning file=WeTransfer（${{matrix.target}}）::$(cat wetransfer.log | grep https)"
+
+      - name: 提取发布用的「奶牛快传」跟「WeTransfer」的链接
+        if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
+        run: |
+          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          curl -fsSL git.io/file-transfer | sh
+          ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
+          echo "COWTRANSFER_URL=$(cat cowtransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
+          curl -fsSL git.io/file-transfer | sh
+          ./transfer wet -s -p 16 --no-progress ${FIRMWARE} 2>&1 | tee wetransfer.log
+          echo "WETRANSFER_URL=$(cat wetransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
+
+      - name: 自动发布固件
+        uses: softprops/action-gh-release@v1
+        if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+        with:
+          name: $(date "+%Y年%m月%d号-%H点%M分") 「 ${{matrix.target}} 」固件
+          tag_name: $(date "+%Y%m%d%H%M%S")
+          body: |
             OpenWrt-${{ env.NAME2 }}${{ env.NAME1 }}-firmware-${{ env.build_date }}
 
             💐 奶牛快传(国内高速🚀下载)： ${{ env.COWTRANSFER_URL }}
-            
+
             ⛄ WeTransfer(国外高速🚀下载)： ${{ env.WETRANSFER_URL }}
-            
+
             🌴 链接有效期为7天，无需注册直接下载 🐤
-        files: ${{ env.FIRMWARE }}/*
-        
-    - name: Remove old Releases
-      uses: dev-drprasad/delete-older-releases@v0.1.0
-      if: env.REMOVE_OLD_RELEASE == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
-      with:
-        keep_latest: 10
-        delete_tags: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
-        
-    - name: Delete Artifacts
-      uses: geekyeggo/delete-artifact@v1
-      if: env.DELETE_ARTIFACT == 'true' && !cancelled()
-      with:
-        name: |
-          bin-archive
+          files: ${{ env.FIRMWARE }}/*
+
+      - name: Remove old Releases
+        uses: dev-drprasad/delete-older-releases@v0.1.0
+        if: env.REMOVE_OLD_RELEASE == 'true' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+        with:
+          keep_latest: 10
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+
+      - name: Delete Artifacts
+        uses: geekyeggo/delete-artifact@v1
+        if: env.DELETE_ARTIFACT == 'true' && !cancelled()
+        with:
+          name: |
+            bin-archive
   
