@@ -112,7 +112,7 @@ jobs:
           echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           # 仓库代码默认检出到GITHUB_WORKSPACE
           REPO_DIR=${GITHUB_WORKSPACE}
-          sudo chmod 777 -R $OPENWRT_DIR/build
+          sudo chmod 777 -R $REPO_DIR
           if [ -f "$REPO_DIR/build/${{matrix.target}}/$DIY_SH" ]; then
             /bin/bash "$REPO_DIR/build/${{matrix.target}}/$DIY_SH"
           fi
