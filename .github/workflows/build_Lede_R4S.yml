@@ -40,6 +40,7 @@ env:
 jobs:
   build:
     runs-on: Ubuntu-20.04
+    timeout-minutes: 3600
     #if: github.event.repository.owner.id == github.event.sender.id
     name: 编译 ${{matrix.target}}
     strategy:
@@ -146,6 +147,7 @@ jobs:
           find dl -size -1024c -exec rm -f {} \;
 
       - name: 开始编译固件
+        timeout-minutes: 3600
         id: compile
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
