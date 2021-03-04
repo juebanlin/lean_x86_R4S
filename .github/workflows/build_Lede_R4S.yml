@@ -35,7 +35,7 @@ env:
   UPLOAD_COWTRANSFER: true     #上传固件到到【奶牛快传】和【WETRANSFER】（true=开启）（false=关闭）
   UPLOAD_RELEASE: true         #发布固件（true=开启）（false=关闭）
   DELETE_ARACFICT: false
-  WORKER_DIR: "/d"              #自定义工作目录,解决插件过多,参数长导致问题
+  WORK_DIR: "/d"              #自定义工作目录,解决插件过多,参数长导致问题
   OPENWRT_DIR_NAME: "_op"
 
 jobs:
@@ -66,7 +66,7 @@ jobs:
           #让后面的步骤可以用到这些变量
           sudo chmod 777 $GITHUB_ENV
           echo "ACT=${ACT}" >> $GITHUB_ENV
-          sudo ln -s ${GITHUB_WORKSPACE} ${WORKER_DIR}
+          sudo ln -s ${GITHUB_WORKSPACE} ${WORK_DIR}
       - name: 检出构建仓库
         uses: actions/checkout@v2
         if: env.ACT == 'false'
@@ -75,7 +75,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR},target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo -E apt-get -qq update -y
@@ -85,7 +85,7 @@ jobs:
 
       - name: 下载lean源码
         run: |
-          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR},target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
           df -hT $PWD
           sudo git config --global user.email "git@github.com"
@@ -96,7 +96,7 @@ jobs:
       - name: 更新 Feeds
         id: update
         run: |
-          echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
+          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR},target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
           cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
           ./scripts/feeds update -a
