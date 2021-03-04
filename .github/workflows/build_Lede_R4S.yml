@@ -28,8 +28,6 @@ env:
   REPO_BRANCH: "master"                                #源码链接的分支（请勿修改）
   CONFIG_FILE: ".config"            #配置文件（可SSH远程定制固件插件，也可在本地提取配置粘贴到此文件）(默认4GB内存的,要编译1GB内存的把 .config 修改成 1gb.config 就可以了)
   DIY_SH: "customDiy.sh"                     #自定义文件
-  DIY_P1_SH: "diy-1.sh"                 #自定义文件2
-  DIY_P2_SH: "diy-2.sh"                 #自定义文件2
   SSH_ACTIONS: false           #SSH远程配置固件（true=开启）（false=关闭）
   UPLOAD_BIN_DIR: true         #上传【bin文件夹】到github空间（true=开启）（false=关闭）
   UPLOAD_CONFIG: true          #上传【.config】配置文件到github空间（true=开启）（false=关闭）
@@ -37,6 +35,8 @@ env:
   UPLOAD_COWTRANSFER: true     #上传固件到到【奶牛快传】和【WETRANSFER】（true=开启）（false=关闭）
   UPLOAD_RELEASE: true         #发布固件（true=开启）（false=关闭）
   DELETE_ARACFICT: false
+  WORKER_DIR: "/d"              #自定义工作目录,解决插件过多,参数长导致问题
+  OPENWRT_DIR_NAME: "_op"
 
 jobs:
   build:
@@ -66,17 +66,7 @@ jobs:
           #让后面的步骤可以用到这些变量
           sudo chmod 777 $GITHUB_ENV
           echo "ACT=${ACT}" >> $GITHUB_ENV
-          echo "REPO_URL=${REPO_URL}" >> $GITHUB_ENV
-          echo "REPO_BRANCH=${REPO_BRANCH}" >> $GITHUB_ENV
-          echo "CONFIG_FILE=${CONFIG_FILE}" >> $GITHUB_ENV
-          echo "DIY_P1_SH=${DIY_P1_SH}" >> $GITHUB_ENV
-          echo "DIY_P2_SH=${DIY_P2_SH}" >> $GITHUB_ENV
-          echo "SSH_ACTIONS=${SSH_ACTIONS}" >> $GITHUB_ENV
-          echo "UPLOAD_BIN_DIR=${UPLOAD_BIN_DIR}" >> $GITHUB_ENV
-          echo "UPLOAD_CONFIG=${UPLOAD_CONFIG}" >> $GITHUB_ENV
-          echo "UPLOAD_FIRMWARE=${UPLOAD_FIRMWARE}" >> $GITHUB_ENV
-          echo "UPLOAD_COWTRANSFER=${UPLOAD_COWTRANSFER}" >> $GITHUB_ENV
-          echo "UPLOAD_RELEASE=${UPLOAD_RELEASE}" >> $GITHUB_ENV
+          sudo ln -s ${GITHUB_WORKSPACE} ${WORKER_DIR}
       - name: 检出构建仓库
         uses: actions/checkout@v2
         if: env.ACT == 'false'
@@ -100,28 +90,28 @@ jobs:
           df -hT $PWD
           sudo git config --global user.email "git@github.com"
           sudo git config --global user.name "GitHub"
-          sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL openwrt
-          sudo chown -R $(whoami) openwrt
+          sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL ${OPENWRT_DIR_NAME}
+          sudo chown -R $(whoami) ${OPENWRT_DIR_NAME}
 
       - name: 更新 Feeds
         id: update
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
-          cd openwrt
+          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
           ./scripts/feeds update -a
 
       - name: 安装 Feeds
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
-          cd openwrt
+          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
           ./scripts/feeds install -a
 
       - name: 进行自定义设置
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-          cd openwrt
+          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
           sudo chmod 777 -R $GITHUB_WORKSPACE/build
           if [ -f "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_SH" ]; then
             /bin/bash "$GITHUB_WORKSPACE/build/${{matrix.target}}/$DIY_SH"
@@ -155,8 +145,8 @@ jobs:
         id: package
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-          cd openwrt
           sudo chmod 777 -R $GITHUB_WORKSPACE
+          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
           make defconfig
           cat .config
           make download -j8 V=s
@@ -168,8 +158,8 @@ jobs:
         id: compile
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
-          cd openwrt
           sudo chmod 777 -R $GITHUB_WORKSPACE
+          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
           echo -e "$(($(nproc)+1)) thread compile"
           make -j$(($(nproc)+1)) || make -j1 V=s
           echo "::set-output name=status::success"
@@ -190,18 +180,18 @@ jobs:
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
           name: OpenWrt-bin-${{ env.NAME2 }}${{ env.NAME1 }}_${{ env.build_date }}
-          path: openwrt/bin
+          path: ${OPENWRT_DIR_NAME}/bin
 
       - name: 整理固件文件夹
         id: organizer
         run: |
           echo "当前用户:$(whoami),当前目录:$(pwd),target:${{matrix.target}}"
           mkdir config
-          find openwrt/bin/targets/ -name "*config.buildinfo*" | xargs -i cp -f {} config
-          if [ -n "$(ls -A "openwrt/bin/targets/x86" 2>/dev/null)" ]; then
-           find openwrt/bin/targets/x86/* -name "*kernel*" | xargs -i mv -f {} openwrt/bin/targets
+          find ${OPENWRT_DIR_NAME}/bin/targets/ -name "*config.buildinfo*" | xargs -i cp -f {} config
+          if [ -n "$(ls -A "${OPENWRT_DIR_NAME}/bin/targets/x86" 2>/dev/null)" ]; then
+           find ${OPENWRT_DIR_NAME}/bin/targets/x86/* -name "*kernel*" | xargs -i mv -f {} openwrt/bin/targets
           fi
-          cd openwrt/bin/targets/*/*
+          cd ${OPENWRT_DIR_NAME}/bin/targets/*/*
           rm -rf packages && mkdir packages
           find -name "*feeds.buildinfo*" | xargs -i mv -f {} packages
           find -name "*version.buildinfo*" | xargs -i mv -f {} packages
