@@ -44,5 +44,5 @@ rm -rf luci-app-smartdns
 git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
 popd
 
-./scripts/feeds install luci -a
+./scripts/feeds install -a
 echo "########DIY2.sh END######"
