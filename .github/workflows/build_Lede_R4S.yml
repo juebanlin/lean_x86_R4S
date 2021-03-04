@@ -35,8 +35,7 @@ env:
   UPLOAD_COWTRANSFER: true     #上传固件到到【奶牛快传】和【WETRANSFER】（true=开启）（false=关闭）
   UPLOAD_RELEASE: true         #发布固件（true=开启）（false=关闭）
   DELETE_ARACFICT: false
-  WORK_DIR: "/d"              #自定义工作目录,解决插件过多,参数长导致问题
-  OPENWRT_DIR_NAME: "_op"
+  OPENWRT_DIR: "/op"              #自定义op目录,解决插件过多,参数长导致问题
 
 jobs:
   build:
@@ -66,7 +65,8 @@ jobs:
           #让后面的步骤可以用到这些变量
           sudo chmod 777 $GITHUB_ENV
           echo "ACT=${ACT}" >> $GITHUB_ENV
-          sudo ln -s ${GITHUB_WORKSPACE} ${WORK_DIR}
+          sudo mkdir -p ${OPENWRT_DIR}
+          sudo chown -R $(whoami) ${OPENWRT_DIR}
       - name: 检出构建仓库
         uses: actions/checkout@v2
         if: env.ACT == 'false'
@@ -75,9 +75,8 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          cd ${WORK_DIR}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo -E apt-get -qq update -y
           sudo -E apt-get -qq install -y build-essential asciidoc binutils bzip2 gawk gettext git libc6-dev libncurses5 libtinfo-dev libtinfo5 ncurses-doc libncurses5-dev libz-dev patch python3 python2.7 unzip zlib1g-dev lib32gcc1 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler g++-multilib antlr3 gperf wget curl swig rsync
@@ -86,54 +85,53 @@ jobs:
 
       - name: 下载lean源码
         run: |
-          cd ${WORK_DIR}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           df -hT $PWD
           sudo git config --global user.email "git@github.com"
           sudo git config --global user.name "GitHub"
-          sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL ${OPENWRT_DIR_NAME}
-          sudo chown -R $(whoami) ${OPENWRT_DIR_NAME}
+          sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL ${OPENWRT_DIR}
+          sudo chown -R $(whoami) ${OPENWRT_DIR}
 
       - name: 更新 Feeds
         id: update
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           ./scripts/feeds update -a
 
       - name: 安装 Feeds
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           ./scripts/feeds install -a
 
       - name: 进行自定义设置
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          sudo chmod 777 -R $WORK_DIR/build
-          if [ -f "$WORK_DIR/build/${{matrix.target}}/$DIY_SH" ]; then
-            /bin/bash "$WORK_DIR/build/${{matrix.target}}/$DIY_SH"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
+          # 仓库代码默认检出到GITHUB_WORKSPACE
+          REPO_DIR=${GITHUB_WORKSPACE}
+          sudo chmod 777 -R $OPENWRT_DIR/build
+          if [ -f "$REPO_DIR/build/${{matrix.target}}/$DIY_SH" ]; then
+            /bin/bash "$REPO_DIR/build/${{matrix.target}}/$DIY_SH"
           fi
           #打补丁
-          if [ -n "$(ls -A "$WORK_DIR/patches" 2>/dev/null)" ]; then
-             sudo git am $WORK_DIR/patches/lean/*.patch
+          if [ -n "$(ls -A "$REPO_DIR/patches" 2>/dev/null)" ]; then
+             sudo git am $REPO_DIR/patches/lean/*.patch
           fi
-          if [ -n "$(ls -A "$WORK_DIR/build/${{matrix.target}}/files" 2>/dev/null)" ]; then
-              cp -rf $WORK_DIR/build/${{matrix.target}}/files files
+          if [ -n "$(ls -A "$REPO_DIR/build/${{matrix.target}}/files" 2>/dev/null)" ]; then
+              cp -rf $REPO_DIR/build/${{matrix.target}}/files files
           fi
-          if [ -n "$(ls -A "$WORK_DIR/build/${{matrix.target}}/diy" 2>/dev/null)" ]; then
-              cp -Rf $WORK_DIR/build/${{matrix.target}}/diy/* ./
+          if [ -n "$(ls -A "$REPO_DIR/build/${{matrix.target}}/diy" 2>/dev/null)" ]; then
+              cp -Rf $REPO_DIR/build/${{matrix.target}}/diy/* ./
           fi
-          if [ -n "$(ls -A "$WORK_DIR/build/${{matrix.target}}/patches" 2>/dev/null)" ]; then
-            find "$WORK_DIR/build/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
+          if [ -n "$(ls -A "$REPO_DIR/build/${{matrix.target}}/patches" 2>/dev/null)" ]; then
+            find "$REPO_DIR/build/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
           fi
           #复制config文件
-          [ -e $WORK_DIR/build/${{matrix.target}}/$CONFIG_FILE ]
-          mv $WORK_DIR/build/${{matrix.target}}/$CONFIG_FILE .config
+          [ -e $REPO_DIR/build/${{matrix.target}}/$CONFIG_FILE ]
+          mv $REPO_DIR/build/${{matrix.target}}/$CONFIG_FILE .config
           #删除不必要的文件
           rm -rf {LICENSE,README,README.md}
           rm -rf ./*/{LICENSE,README,README.md}
@@ -146,9 +144,9 @@ jobs:
       - name: 下载软件包
         id: package
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          sudo chmod 777 -R $WORK_DIR
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
+          sudo chmod 777 -R $OPENWRT_DIR
           make defconfig
           cat .config
           make download -j8 V=s
@@ -159,9 +157,9 @@ jobs:
         timeout-minutes: 3600
         id: compile
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
-          sudo chmod 777 -R $WORK_DIR
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
+          sudo chmod 777 -R $OPENWRT_DIR
           echo -e "$(($(nproc)+1)) thread compile"
           make -j$(($(nproc)+1)) || make -j1 V=s
           echo "::set-output name=status::success"
@@ -182,19 +180,19 @@ jobs:
         if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true'
         with:
           name: OpenWrt-bin-${{ env.NAME2 }}${{ env.NAME1 }}_${{ env.build_date }}
-          path: ${OPENWRT_DIR_NAME}/bin
+          path: ${OPENWRT_DIR}/bin
 
       - name: 整理固件文件夹
         id: organizer
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           mkdir config
-          find ${OPENWRT_DIR_NAME}/bin/targets/ -name "*config.buildinfo*" | xargs -i cp -f {} config
-          if [ -n "$(ls -A "${OPENWRT_DIR_NAME}/bin/targets/x86" 2>/dev/null)" ]; then
-           find ${OPENWRT_DIR_NAME}/bin/targets/x86/* -name "*kernel*" | xargs -i mv -f {} openwrt/bin/targets
+          find ./bin/targets/ -name "*config.buildinfo*" | xargs -i cp -f {} config
+          if [ -n "$(ls -A "./bin/targets/x86" 2>/dev/null)" ]; then
+           find ./bin/targets/x86/* -name "*kernel*" | xargs -i mv -f {} openwrt/bin/targets
           fi
-          cd ${OPENWRT_DIR_NAME}/bin/targets/*/*
+          cd ./bin/targets/*/*
           FIRMWARE=$(pwd)
           rm -rf packages && mkdir packages
           find -name "*feeds.buildinfo*" | xargs -i mv -f {} packages
@@ -223,8 +221,8 @@ jobs:
       - name: 上传固件到「奶牛快传」和「WeTransfer」
         if: steps.organizer.outputs.status == 'success' && env.UPLOAD_COWTRANSFER == 'true' && !cancelled()
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           curl -fsSL git.io/file-transfer | sh
           ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
           echo "::warning file=奶牛快传（${{matrix.target}}）::$(cat cowtransfer.log | grep https)"
@@ -235,8 +233,8 @@ jobs:
       - name: 提取发布用的「奶牛快传」跟「WeTransfer」的链接
         if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
-          echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR}"
+          cd ${OPENWRT_DIR}
+          echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           curl -fsSL git.io/file-transfer | sh
           ./transfer cow --block 2621440 -s -p 64 --no-progress ${FIRMWARE} 2>&1 | tee cowtransfer.log
           echo "COWTRANSFER_URL=$(cat cowtransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
