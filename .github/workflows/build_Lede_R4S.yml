@@ -75,7 +75,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
+          cd ${WORK_DIR}
           echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR},target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
@@ -86,7 +86,7 @@ jobs:
 
       - name: 下载lean源码
         run: |
-          cd ${WORK_DIR}/${OPENWRT_DIR_NAME}
+          cd ${WORK_DIR}
           echo "当前用户:$(whoami),当前目录:$(pwd),WORK_DIR:${WORK_DIR},target:${{matrix.target}}"
           echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
           df -hT $PWD
