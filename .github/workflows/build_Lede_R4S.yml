@@ -159,6 +159,7 @@ jobs:
         run: |
           cd ${OPENWRT_DIR}
           export GO111MODULE=""
+          echo "GO111MODULE=" >> $GITHUB_ENV
           echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           sudo chmod 777 -R $OPENWRT_DIR
           echo -e "$(($(nproc)+1)) thread compile"
