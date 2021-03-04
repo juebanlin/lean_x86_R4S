@@ -159,7 +159,8 @@ pushd feeds/luci/applications
 rm -rf luci-app-smartdns
 git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
 popd
-./scripts/feeds install -a luci
+./scripts/feeds update -a
+./scripts/feeds install -a
 
 echo -e " Lean's OpenWrt built on "$(date +%Y.%m.%d)"\n -----------------------------------------------------" >> package/base-files/files/etc/banner
 echo "######DIY1.sh end######"
