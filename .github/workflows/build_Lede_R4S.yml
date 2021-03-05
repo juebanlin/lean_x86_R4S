@@ -57,19 +57,33 @@ jobs:
                sudo ln -snf /usr/share/zoneinfo/$TZ /etc/localtime
                echo "修正后当前时间$(date)"
           fi
+          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
+          sudo chmod 777 $GITHUB_ENV
+
           if [ "x${ACT}" != "xtrue" ]; then
                 ACT='false'
           fi
           echo "ACT=${ACT}"
-          echo "GITHUB_WORKSPACE=${GITHUB_WORKSPACE}"
-          #让后面的步骤可以用到这些变量
-          sudo chmod 777 $GITHUB_ENV
           echo "ACT=${ACT}" >> $GITHUB_ENV
+
+          echo "OPENWRT_DIR=${OPENWRT_DIR}"
+          if [[ "x${ACT}" == "xtrue" &&  "x${{ secrets.BIND_IN_WORKSPACE }}" == "xtrue" ]]; then
+              # act 环境下,指定了容器绑定目录
+              OPENWRT_DIR=${GITHUB_WORKSPACE}/${BIND_WORKSPACE_DIR}
+              if [[ -d "$OPENWRT_DIR" ]]; then
+                  sudo rm -rf $OPENWRT_DIR
+              fi
+              echo "OPENWRT_DIR=${OPENWRT_DIR}" >> $GITHUB_ENV
+          fi
+
+          echo "OPENWRT_DIR=${OPENWRT_DIR}"
+          #让后面的步骤可以用到这些变量
           sudo mkdir -p ${OPENWRT_DIR}
           sudo chown -R $(whoami) ${OPENWRT_DIR}
+
       - name: 检出构建仓库
         uses: actions/checkout@v2
-        if: env.ACT == 'false'
+        if: env.ACT != 'true' && "x${{ secrets.BIND_IN_WORKSPACE }}" != "xtrue"
 
       - name: 开始安装编译所需系统
         env:
@@ -90,8 +104,7 @@ jobs:
           df -hT $PWD
           sudo git config --global user.email "git@github.com"
           sudo git config --global user.name "GitHub"
-          sudo git clone -b $REPO_BRANCH --single-branch $REPO_URL ${OPENWRT_DIR}
-          sudo chown -R $(whoami) ${OPENWRT_DIR}
+          git clone -b $REPO_BRANCH --single-branch $REPO_URL ${OPENWRT_DIR}
 
       - name: 更新 Feeds
         id: update
@@ -117,22 +130,27 @@ jobs:
             /bin/bash "$REPO_DIR/build/${{matrix.target}}/$DIY_SH"
           fi
           #打补丁
+          echo "###$(pwd)### apply patches"
           if [ -n "$(ls -A "$REPO_DIR/patches" 2>/dev/null)" ]; then
              sudo git am $REPO_DIR/patches/lean/*.patch
           fi
+          echo "###$(pwd)### apply files"
           if [ -n "$(ls -A "$REPO_DIR/build/${{matrix.target}}/files" 2>/dev/null)" ]; then
               cp -rf $REPO_DIR/build/${{matrix.target}}/files files
           fi
+          echo "###$(pwd)### apply diy"
           if [ -n "$(ls -A "$REPO_DIR/build/${{matrix.target}}/diy" 2>/dev/null)" ]; then
               cp -Rf $REPO_DIR/build/${{matrix.target}}/diy/* ./
           fi
           if [ -n "$(ls -A "$REPO_DIR/build/${{matrix.target}}/patches" 2>/dev/null)" ]; then
             find "$REPO_DIR/build/${{matrix.target}}/patches" -type f -name '*.patch' -print0 | sort -z | xargs -I % -t -0 -n 1 sh -c "cat '%'  | patch -d './' -p1 --forward --no-backup-if-mismatch"
           fi
+          echo "###$(pwd)### copy .config"
           #复制config文件
           [ -e $REPO_DIR/build/${{matrix.target}}/$CONFIG_FILE ]
-          mv $REPO_DIR/build/${{matrix.target}}/$CONFIG_FILE .config
+          cp -rf $REPO_DIR/build/${{matrix.target}}/$CONFIG_FILE .config
           #删除不必要的文件
+          echo "###$(pwd)### 删除不必要的文件"
           rm -rf {LICENSE,README,README.md}
           rm -rf ./*/{LICENSE,README,README.md}
           rm -rf ./*/*/{LICENSE,README,README.md}
@@ -146,7 +164,6 @@ jobs:
         run: |
           cd ${OPENWRT_DIR}
           echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
-          sudo chmod 777 -R $OPENWRT_DIR
           make defconfig
           cat .config
           make download -j8 V=s
@@ -158,10 +175,7 @@ jobs:
         id: compile
         run: |
           cd ${OPENWRT_DIR}
-          export GO111MODULE=""
-          echo "GO111MODULE=" >> $GITHUB_ENV
           echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
-          sudo chmod 777 -R $OPENWRT_DIR
           echo -e "$(($(nproc)+1)) thread compile"
           make -j$(($(nproc)+1)) || make -j1 V=s
           echo "::set-output name=status::success"
