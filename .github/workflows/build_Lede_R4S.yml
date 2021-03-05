@@ -84,7 +84,7 @@ jobs:
 
       - name: 检出构建仓库
         uses: actions/checkout@v2
-        if: env.ACT != 'true' && env.BIND_IN_WORKSPACE != "true"
+        if: env.ACT != 'true' && env.BIND_IN_WORKSPACE != 'true'
 
       - name: 开始安装编译所需系统
         env:
