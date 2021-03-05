@@ -67,6 +67,7 @@ jobs:
           echo "ACT=${ACT}" >> $GITHUB_ENV
 
           echo "OPENWRT_DIR=${OPENWRT_DIR}"
+          echo "BIND_IN_WORKSPACE=${{ secrets.BIND_IN_WORKSPACE }}" >> $GITHUB_ENV
           if [[ "x${ACT}" == "xtrue" &&  "x${{ secrets.BIND_IN_WORKSPACE }}" == "xtrue" ]]; then
               # act 环境下,指定了容器绑定目录
               OPENWRT_DIR=${GITHUB_WORKSPACE}/${BIND_WORKSPACE_DIR}
@@ -83,7 +84,7 @@ jobs:
 
       - name: 检出构建仓库
         uses: actions/checkout@v2
-        if: env.ACT != 'true' && "x${{ secrets.BIND_IN_WORKSPACE }}" != "xtrue"
+        if: env.ACT != 'true' && env.BIND_IN_WORKSPACE != "true"
 
       - name: 开始安装编译所需系统
         env:
