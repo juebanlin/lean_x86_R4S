@@ -80,7 +80,7 @@ jobs:
           echo "OPENWRT_DIR=${OPENWRT_DIR}"
           #让后面的步骤可以用到这些变量
           sudo mkdir -p ${OPENWRT_DIR}
-          sudo chown -R $(whoami) ${OPENWRT_DIR}
+          sudo chown -R $(whoami):$GROUPS ${OPENWRT_DIR}
 
       - name: 检出构建仓库
         uses: actions/checkout@v2
@@ -126,7 +126,7 @@ jobs:
           echo "当前用户:$(whoami),当前目录:$(pwd),OPENWRT_DIR:${OPENWRT_DIR}"
           # 仓库代码默认检出到GITHUB_WORKSPACE
           REPO_DIR=${GITHUB_WORKSPACE}
-          sudo chmod 777 -R $REPO_DIR
+          sudo chown -R $(whoami):$GROUPS $REPO_DIR
           if [ -f "$REPO_DIR/build/${{matrix.target}}/$DIY_SH" ]; then
             /bin/bash "$REPO_DIR/build/${{matrix.target}}/$DIY_SH"
           fi
