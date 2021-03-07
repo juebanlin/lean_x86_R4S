@@ -57,6 +57,9 @@ rm -rf ../lean/luci-theme-argon
 # Add subconverter
 git clone --depth=1 https://github.com/tindy2013/openwrt-subconverter
 
+# Add luci-app-gowebdav
+git clone --depth=1 https://github.com/project-openwrt/openwrt-gowebdav
+
 # Add baiduPcsWeb
 #https://github.com/immortalwrt/immortalwrt/tree/openwrt-21.02/package/ctcgfw/baidupcs-web
 svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw/baidupcs-web
@@ -86,6 +89,12 @@ popd
 git clone https://github.com/openwrt-dev/po2lmo.git
 pushd po2lmo
 make && sudo make install
+popd
+
+# 加入 luci-app-freq
+pushd package/lean
+rm -rf luci-app-cpufreq
+svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/lean/luci-app-cpufreq
 popd
 
 # rm -rf package/lienol/luci-app-timecontrol
