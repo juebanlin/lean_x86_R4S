@@ -180,7 +180,7 @@ jobs:
           echo -e "$(($(nproc)+1)) thread compile"
           make -j$(($(nproc)+1)) || make -j1 V=s
           echo "::set-output name=status::success"
-          echo "build_date=$(date "+%y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "build_date=$(date "+%y.%m.%d-%H:%M")" >> $GITHUB_ENV
           DEVICE=$(awk -F '[="]+' '/TARGET_BOARD/{print $2}' .config)
           SUBTARGET="$(awk -F '[="]+' '/TARGET_SUBTARGET/{print $2}' .config)"
           PRODUCT_NAME='${DEVICE} ${SUBTARGET}'
@@ -252,7 +252,7 @@ jobs:
           echo "WETRANSFER_URL=$(cat wetransfer.log | grep https | cut -f3 -d" ")" >> $GITHUB_ENV
           echo "::warning file=WeTransfer（${{matrix.target}}）::$(cat wetransfer.log | grep https)"
           
-      - name: 自动发布固件
+      - name: 发布固件
         uses: softprops/action-gh-release@v1
         if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
         env:
