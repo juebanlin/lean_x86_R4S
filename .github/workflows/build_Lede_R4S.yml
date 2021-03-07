@@ -257,9 +257,11 @@ jobs:
         if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
+          TIME1: $(date "+%Y年%m月%d号-%H点%M分")
+          TIME2: $(date "+%Y%m%d%H%M%S")
         with:
-          name: $(date "+%Y年%m月%d号-%H点%M分") 「 ${{matrix.target}} 」固件
-          tag_name: $(date "+%Y%m%d%H%M%S")
+          name: $TIME1 「 ${{matrix.target}} 」固件
+          tag_name: $TIME2
           body: |
             OpenWrt-${{ env.PRODUCT_NAME }}-firmware-${{ env.build_date }}
 
