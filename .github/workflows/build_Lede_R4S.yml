@@ -256,7 +256,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         if: steps.organizer.outputs.status == 'success' && (env.UPLOAD_RELEASE == 'true')
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
         with:
           name: $(date "+%Y年%m月%d号-%H点%M分") 「 ${{matrix.target}} 」固件
           tag_name: $(date "+%Y%m%d%H%M%S")
@@ -277,7 +277,7 @@ jobs:
           keep_latest: 10
           delete_tags: true
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.REPO_TOKEN }}
 
       - name: Delete Artifacts
         uses: geekyeggo/delete-artifact@v1
