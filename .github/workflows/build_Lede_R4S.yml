@@ -260,8 +260,8 @@ jobs:
           TIME1: $(date "+%Y年%m月%d号-%H点%M分")
           TIME2: $(date "+%Y%m%d%H%M%S")
         with:
-          name: $TIME1 「 ${{matrix.target}} 」固件
-          tag_name: $TIME2
+          name: env.$TIME1 「 ${{matrix.target}} 」固件
+          tag_name: env.$TIME2
           body: |
             OpenWrt-${{ env.PRODUCT_NAME }}-firmware-${{ env.build_date }}
 
