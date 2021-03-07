@@ -54,10 +54,8 @@ git clone --depth=1 -b 18.06 https://github.com/jerrykuku/luci-theme-argon
 git clone --depth=1 https://github.com/jerrykuku/luci-app-argon-config
 rm -rf ../lean/luci-theme-argon
 
-
 # Add subconverter
 git clone --depth=1 https://github.com/tindy2013/openwrt-subconverter
-
 
 # Add baiduPcsWeb
 #https://github.com/immortalwrt/immortalwrt/tree/openwrt-21.02/package/ctcgfw/baidupcs-web
@@ -65,6 +63,10 @@ svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw
 svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw/luci-app-baidupcs-web
 rm -rf ../lean/baidupcs-web
 rm -rf ../lean/luci-app-baidupcs-web
+
+# Add smartdns
+svn co https://github.com/pymumu/smartdns/trunk/package/openwrt ../smartdns
+svn co https://github.com/project-openwrt/openwrt/trunk/package/ntlf9t/luci-app-smartdns ../luci-app-smartdns
 
 # Add luci-udptools
 git clone --depth=1 https://github.com/zcy85611/openwrt-luci-kcp-udp
@@ -80,34 +82,16 @@ export orig_version="$(cat "zzz-default-settings" | grep DISTRIB_REVISION= | awk
 sed -i "s/${orig_version}/${orig_version} ($(date +"%Y.%m.%d"))/g" zzz-default-settings
 popd
 
-# Add smartdns
-pushd package/community
-rm -rf smartdns
-rm -rf luci-app-smartdns
-git clone --depth=1 https://github.com/pymumu/smartdns
-#git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
-rm -rf ../lean/smartdns
-rm -rf ../lean/luci-app-smartdns
-popd
-
-pushd feeds/luci/applications
-rm -rf luci-app-smartdns
-git clone --depth=1 -b lede https://github.com/pymumu/luci-app-smartdns
-popd
-#./scripts/feeds update -a
-./scripts/feeds install -a
-
 # Add po2lmo
 git clone https://github.com/openwrt-dev/po2lmo.git
 pushd po2lmo
 make && sudo make install
 popd
 
-
-rm -rf package/lienol/luci-app-timecontrol
-rm -rf package/ntlf9t/{smartdns,luci-app-smartdns}
-rm -rf package/ctcgfw/{luci-app-argon-config,luci-theme-argonv3}
-rm -rf package/lean/{luci-app-netdata,luci-theme-argon,k3screenctrl}
+# rm -rf package/lienol/luci-app-timecontrol
+# rm -rf package/ntlf9t/{smartdns,luci-app-smartdns}
+# rm -rf package/ctcgfw/{luci-app-argon-config,luci-theme-argonv3}
+# rm -rf package/lean/{luci-app-netdata,luci-theme-argon,k3screenctrl}
 
 #sed -i 's/sources.openwrt.org/sources.cdn.openwrt.org/g' scripts/download.pl
 
