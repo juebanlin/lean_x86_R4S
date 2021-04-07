@@ -62,8 +62,10 @@ git clone --depth=1 https://github.com/project-openwrt/openwrt-gowebdav
 
 # Add baiduPcsWeb
 #https://github.com/immortalwrt/immortalwrt/tree/openwrt-21.02/package/ctcgfw/baidupcs-web
-svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw/baidupcs-web
-svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw/luci-app-baidupcs-web
+#svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw/baidupcs-web
+#svn co https://github.com/immortalwrt/immortalwrt/branches/master/package/ctcgfw/luci-app-baidupcs-web
+svn co https://github.com/immortalwrt/packages/branches/master/net/baidupcs-web
+svn co https://github.com/immortalwrt/luci/branches/master/applications/luci-app-baidupcs-web
 rm -rf ../lean/baidupcs-web
 rm -rf ../lean/luci-app-baidupcs-web
 
